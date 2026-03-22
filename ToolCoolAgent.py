@@ -54,4 +54,52 @@ tools = [
 ]
 
 
+def run_agent(user_input):
+    messages = [
+        {"role": "system", "content": "You are a helpful AI agent that can use tools."},
+        {"role": "user", "content": user_input}
+    ]
 
+    while True:
+        response = client.chat.completions.create(
+            model="gpt-5.3",
+            messages=messages,
+            tools=tools,
+            tool_choice="auto"
+        )
+
+        message = response.choices[0].message
+        messages.append(message)
+
+        #If tool is called this will work
+        if message.tool_calls:
+            for tool_call in message.tool_calls:
+                tool_name = tool_call.function.name
+                arguments = json.loads(tool_call.function.arguments)
+
+                # Calling the actual function
+                if tool_name == "calculator":
+                    result = calculator(**arguments)
+                elif tool_name == "search_tool":
+                    result = search_tool(**arguments)
+                else:
+                    result = "Unknown tool"
+
+                #Add the tool response
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result
+                })
+
+        else:
+            #Final response
+            return message.content
+
+
+
+if __name__ == "__main__":
+    while True:
+        query = input("You: ")
+        answer = run_agent(query)
+        print("Agent:", answer)
